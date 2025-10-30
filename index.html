@@ -1,1 +1,2299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoM Management System</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Load Lucide Icons (MOVED to end of body) -->
+    
+    <!-- Configure Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    transitionProperty: {
+                        'height': 'height',
+                        'spacing': 'margin, padding',
+                    },
+                },
+            },
+        };
+    </script>
+    
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+
+        /* Modal transitions */
+        .modal {
+            transition: opacity 0.25s ease, transform 0.25s ease;
+        }
+        .modal-content {
+            transition: transform 0.25s ease;
+        }
+
+        /* Rich Text Editor basic style */
+        [contenteditable="true"] {
+            min-height: 100px;
+            border: 1px solid #d1d5db; /* border-gray-300 */
+            border-radius: 0.375rem; /* rounded-md */
+            padding: 0.5rem 0.75rem; /* p-2 px-3 */
+            overflow-y: auto;
+        }
+        [contenteditable="true"]:focus {
+            outline: none;
+            border-color: #3b82f6; /* border-blue-500 */
+            box-shadow: 0 0 0 2px #bfdbfe; /* ring-2 ring-blue-200 */
+        }
+        
+        /* Hide number input spinners */
+        input[type='number']::-webkit-inner-spin-button,
+        input[type='number']::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type='number'] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900 antialiased">
+
+    <!-- ===== Main Application Container ===== -->
+    <div id="app" class="min-h-screen">
+
+        <!-- Header -->
+        <header class="bg-white shadow-md sticky top-0 z-40">
+            <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center space-x-2">
+                        <span data-lucide="notebook-tabs" class="text-blue-600"></span>
+                        <span class="text-xl font-bold text-gray-800">MoM Management</span>
+                    </div>
+                    <div>
+                        <!-- Future nav items can go here -->
+                        <span id="user-avatar" class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-semibold">AD</span>
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="container mx-auto p-4 sm:p-6 lg:p-8">
+
+            <!-- ===== Page 1: Meeting List ===== -->
+            <div id="meeting-list-page">
+                <!-- Page Header -->
+                <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
+                    <h1 class="text-3xl font-bold text-gray-900">Meetings</h1>
+                    <div class="flex items-center gap-4">
+                        <button id="open-schedule-meeting-modal" class="flex items-center gap-2 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-200">
+                            <span data-lucide="plus"></span>
+                            Schedule Meeting
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="bg-white p-4 rounded-lg shadow-sm mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <input id="filter-search" type="text" placeholder="Search by title, location..." class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <select id="filter-status" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Statuses</option>
+                            <option value="Scheduled">Scheduled</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Draft">Draft</option>
+                            <option value="Under Review">Under Review</option>
+                            <option value="Finalized">Finalized</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                        <select id="filter-type" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Types</option>
+                            <option value="Team Sync">Team Sync</option>
+                            <option value="Client Meeting">Client Meeting</option>
+                            <option value="Review">Review</option>
+                            <option value="Planning">Planning</option>
+                            <option value="Training">Training</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <input id="filter-date" type="date" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <!-- Meeting List Grid -->
+                <div id="meeting-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Meeting cards will be injected here -->
+                    <!-- Card Skeleton for loading -->
+                    <div class="bg-white p-6 rounded-lg shadow-md animate-pulse">
+                        <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                        <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="h-6 bg-gray-200 rounded w-1/4"></div>
+                            <div class="h-6 bg-gray-200 rounded w-1/4"></div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex -space-x-2">
+                                <div class="h-8 w-8 bg-gray-300 rounded-full border-2 border-white"></div>
+                                <div class="h-8 w-8 bg-gray-300 rounded-full border-2 border-white"></div>
+                            </div>
+                            <div class="h-10 bg-gray-300 rounded-lg w-1/3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== Page 2: Meeting View/Edit ===== -->
+            <div id="meeting-view-page" class="hidden">
+                <!-- Back Button -->
+                <button id="back-to-list-btn" class="flex items-center gap-2 text-blue-600 font-semibold mb-4 hover:underline">
+                    <span data-lucide="arrow-left"></span>
+                    Back to All Meetings
+                </button>
+
+                <!-- Meeting Info Header -->
+                <div id="meeting-info-header" class="bg-white p-6 rounded-lg shadow-md mb-6">
+                    <!-- Meeting info will be injected here -->
+                </div>
+
+                <!-- KPI Dashboard -->
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold mb-4">Meeting Dashboard</h2>
+                    <div id="kpi-dashboard" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        <!-- KPI cards will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Discussion Points Section -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4">
+                        <h2 class="text-2xl font-bold">Discussion Points</h2>
+                        <button id="open-add-discussion-modal" class="flex items-center gap-2 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-200">
+                            <span data-lucide="plus-circle"></span>
+                            Add Discussion Point
+                        </button>
+                    </div>
+
+                    <!-- Discussion Filters -->
+                    <div class="flex flex-wrap gap-2 mb-4 border-b pb-4">
+                        <button data-filter="all" class="discussion-filter-btn bg-blue-600 text-white py-1 px-3 rounded-full text-sm">All</button>
+                        <button data-filter="action" class="discussion-filter-btn bg-gray-200 text-gray-700 py-1 px-3 rounded-full text-sm">Action Items</button>
+                        <button data-filter="completed" class="discussion-filter-btn bg-gray-200 text-gray-700 py-1 px-3 rounded-full text-sm">Completed</button>
+                        <button data-filter="overdue" class="discussion-filter-btn bg-gray-200 text-gray-700 py-1 px-3 rounded-full text-sm">Overdue</button>
+                    </div>
+
+                    <!-- Discussion List -->
+                    <div id="discussion-list-container" class="space-y-4">
+                        <!-- Discussion cards will be injected here -->
+                    </div>
+                </div>
+                
+                <!-- Meeting Evidence Section -->
+                <div class="bg-white p-6 rounded-lg shadow-md mt-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold">Meeting Evidence</h2>
+                        <button id="open-upload-meeting-evidence-modal" class="flex items-center gap-2 bg-gray-200 text-gray-700 font-semibold py-2 px-3 rounded-lg hover:bg-gray-300 transition-all duration-200 text-sm">
+                            <span data-lucide="upload"></span>
+                            Upload Evidence
+                        </button>
+                    </div>
+                    <div id="meeting-evidence-list" class="space-y-3">
+                        <!-- Meeting evidence items will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ===== MODALS ===== -->
+
+    <!-- Modal: Schedule Meeting -->
+    <div id="create-meeting-modal" class="modal fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 opacity-0 pointer-events-none">
+        <div class="modal-content bg-white w-full max-w-3xl rounded-lg shadow-xl max-h-[90vh] overflow-y-auto transform scale-95">
+            <form id="create-meeting-form" novalidate>
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center p-5 border-b">
+                    <h3 class="text-2xl font-bold">Schedule New Meeting</h3>
+                    <button type="button" class="close-modal-btn p-1 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-600" data-modal-id="create-meeting-modal">
+                        <span data-lucide="x" class="h-6 w-6"></span>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-6 space-y-6">
+                    
+                    <!-- Title -->
+                    <div>
+                        <label for="meeting-title" class="block text-sm font-medium text-gray-700 mb-1">Title <span class="text-red-500">*</span></label>
+                        <textarea id="meeting-title" rows="2" class="w-full p-2 border border-gray-300 rounded-lg" data-validate="required|min:5" placeholder="e.g., Q4 Product Strategy Review"></textarea>
+                        <span class="text-red-500 text-xs mt-1 hidden" data-error-for="meeting-title">Title must be at least 5 characters.</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Type -->
+                        <div>
+                            <label for="meeting-type" class="block text-sm font-medium text-gray-700 mb-1">Type <span class="text-red-500">*</span></label>
+                            <select id="meeting-type" class="w-full p-2 border border-gray-300 rounded-lg" data-validate="required">
+                                <option value="">Select a type...</option>
+                                <option value="Team Sync">Team Sync</option>
+                                <option value="Client Meeting">Client Meeting</option>
+                                <option value="Review">Review</option>
+                                <option value="Planning">Planning</option>
+                                <option value="Training">Training</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <span class="text-red-500 text-xs mt-1 hidden" data-error-for="meeting-type">Please select a meeting type.</span>
+                        </div>
+
+                        <!-- Location -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Location <span class="text-red-500">*</span></label>
+                            <div class="flex items-center space-x-4 mb-2">
+                                <label class="flex items-center"><input type="radio" name="locationType" value="physical" class="mr-1" checked> Physical</label>
+                                <label class="flex items-center"><input type="radio" name="locationType" value="gps" class="mr-1"> GPS</label>
+                                <label class="flex items-center"><input type="radio" name="locationType" value="virtual" class="mr-1"> Virtual</label>
+                            </div>
+                            <div id="location-inputs-container">
+                                <div id="location-physical" class="relative">
+                                    <input type="text" id="location-physical-input" placeholder="e.g., Conference Room A" class="w-full p-2 border border-gray-300 rounded-lg" data-validate="requiredIf:locationType,physical">
+                                    <span class="text-red-500 text-xs mt-1 hidden" data-error-for="location-physical-input">Please enter a physical location.</span>
+                                </div>
+                                <div id="location-gps" class="hidden">
+                                    <input type="text" id="location-gps-input" placeholder="GPS coordinates" class="w-full p-2 border border-gray-300 rounded-lg" data-validate="requiredIf:locationType,gps" readonly>
+                                    <button type="button" id="get-gps-btn" class="text-xs text-blue-600 hover:underline mt-1">Get Current Location (Demo)</button>
+                                    <span class="text-red-500 text-xs mt-1 hidden" data-error-for="location-gps-input">Please provide GPS coordinates.</span>
+                                </div>
+                                <div id="location-virtual" class="hidden">
+                                    <input type="text" id="location-virtual-input" placeholder="e.g., Zoom/Teams Link" class="w-full p-2 border border-gray-300 rounded-lg" data-validate="requiredIf:locationType,virtual">
+                                    <span class="text-red-500 text-xs mt-1 hidden" data-error-for="location-virtual-input">Please enter a virtual meeting link.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Duration -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Duration <span class="text-red-500">*</span></label>
+                        <div class="flex items-center space-x-2 mb-2">
+                            <input type="checkbox" id="meeting-full-day" class="rounded">
+                            <label for="meeting-full-day">Full Day Meeting</label>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="meeting-start" class="text-xs text-gray-500">Start Date & Time</label>
+                                <input type="datetime-local" id="meeting-start" class="w-full p-2 border border-gray-300 rounded-lg" data-validate="required">
+                                <span class="text-red-500 text-xs mt-1 hidden" data-error-for="meeting-start">Start time is required.</span>
+                            </div>
+                            <div id="meeting-end-container">
+                                <label for="meeting-end" class="text-xs text-gray-500">End Date & Time</label>
+                                <input type="datetime-local" id="meeting-end" class="w-full p-2 border border-gray-300 rounded-lg" data-validate="required">
+                                <span class="text-red-500 text-xs mt-1 hidden" data-error-for="meeting-end">End time is required.</span>
+                            </div>
+                        </div>
+                        <span class="text-red-500 text-xs mt-1 hidden" id="meeting-date-error">End time must be after start time.</span>
+                    </div>
+                    
+                    <!-- Internal Attendees -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Internal Attendees <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <input type="text" id="internal-attendee-search" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Search by name, org, or role...">
+                            <div id="internal-attendee-results" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-lg hidden">
+                                <!-- Search results go here -->
+                            </div>
+                        </div>
+                        <div id="internal-attendee-chips" class="flex flex-wrap gap-2 mt-3">
+                            <!-- Selected attendee chips go here -->
+                        </div>
+                        <span class="text-red-500 text-xs mt-1 hidden" id="internal-attendee-error">At least one internal attendee is required.</span>
+                    </div>
+
+                    <!-- External Attendees -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-sm font-medium text-gray-700">External Attendees (Optional)</label>
+                            <button type="button" id="add-external-attendee" class="text-xs flex items-center gap-1 bg-gray-200 text-gray-700 py-1 px-2 rounded-md hover:bg-gray-300">
+                                <span data-lucide="plus" class="h-4 w-4"></span> Add
+                            </button>
+                        </div>
+                        <div id="external-attendees-container" class="space-y-3">
+                            <!-- Repeatable fields go here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="flex justify-end items-center p-5 border-t space-x-3">
+                    <button type="button" class="close-modal-btn bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300" data-modal-id="create-meeting-modal">Cancel</button>
+                    <button type="submit" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Schedule Meeting</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Modal: Add Discussion Point -->
+    <div id="add-discussion-point-modal" class="modal fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 opacity-0 pointer-events-none">
+        <div class="modal-content bg-white w-full max-w-3xl rounded-lg shadow-xl max-h-[90vh] overflow-y-auto transform scale-95">
+            <form id="discussion-point-form" novalidate>
+                <input type="hidden" id="discussion-point-id">
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center p-5 border-b">
+                    <h3 id="discussion-modal-title" class="text-2xl font-bold">Add Discussion Point</h3>
+                    <button type="button" class="close-modal-btn p-1 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-600" data-modal-id="add-discussion-point-modal">
+                        <span data-lucide="x" class="h-6 w-6"></span>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-6 space-y-6">
+                    <!-- Raised By -->
+                    <div>
+                        <label for="dp-raised-by-type" class="block text-sm font-medium text-gray-700 mb-1">Raised By <span class="text-red-500">*</span></label>
+                        <select id="dp-raised-by-type" class="w-full p-2 border border-gray-300 rounded-lg" data-validate="required">
+                            <option value="">Select source...</option>
+                            <optgroup label="Internal" id="dp-raised-by-internal-group"></optgroup>
+                            <optgroup label="External" id="dp-raised-by-external-group"></optgroup>
+                            <option value="multiple_participants">Multiple Participants</option>
+                        </select>
+                        <span class="text-red-500 text-xs mt-1 hidden" data-error-for="dp-raised-by-type">Please select who raised this point.</span>
+                    </div>
+
+                    <!-- Discussion Summary -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Discussion Summary <span class="text-red-500">*</span></label>
+                        <!-- Simple Rich Text Editor -->
+                        <div class="flex items-center gap-2 border border-gray-300 rounded-t-lg bg-gray-50 p-2">
+                            <button type="button" class="rte-btn p-1 hover:bg-gray-200 rounded" data-command="bold"><span data-lucide="bold" class="h-4 w-4"></span></button>
+                            <button type="button" class="rte-btn p-1 hover:bg-gray-200 rounded" data-command="italic"><span data-lucide="italic" class="h-4 w-4"></span></button>
+                            <button type="button" class="rte-btn p-1 hover:bg-gray-200 rounded" data-command="insertUnorderedList"><span data-lucide="list" class="h-4 w-4"></span></button>
+                        </div>
+                        <div id="dp-summary" class="w-full p-2 border border-t-0 border-gray-300 rounded-b-lg" contenteditable="true"></div>
+                        <span class="text-red-500 text-xs mt-1 hidden" id="dp-summary-error">Summary must be at least 10 characters.</span>
+                    </div>
+                    
+                    <!-- Action Required -->
+                    <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                        <label for="dp-action-required" class="text-sm font-medium text-gray-700">Action Required?</label>
+                        <button type="button" id="dp-action-required-toggle" role="switch" aria-checked="false" class="bg-gray-200 relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                            <span aria-hidden="true" class="translate-x-0 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+                        </button>
+                    </div>
+
+                    <!-- Action Details (Conditional) -->
+                    <div id="dp-action-details" class="hidden space-y-6 pt-4 border-t border-dashed">
+                        
+                        <div>
+                            <label for="dp-action-desc" class="block text-sm font-medium text-gray-700 mb-1">Action Description <span class="text-red-500">*</span></label>
+                            <textarea id="dp-action-desc" rows="3" class="w-full p-2 border border-gray-300 rounded-lg" data-validate="requiredIf:dp-action-required,true|min:10" placeholder="Describe the action item clearly..."></textarea>
+                            <span class="text-red-500 text-xs mt-1 hidden" data-error-for="dp-action-desc">Description must be at least 10 characters.</span>
+                        </div>
+                        
+                        <!-- Responsible Persons (Internal) -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Responsible Person(s) (Internal) <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <input type="text" id="dp-resp-internal-search" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Search internal attendees...">
+                                <div id="dp-resp-internal-results" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-lg hidden"></div>
+                            </div>
+                            <div id="dp-resp-internal-chips" class="flex flex-wrap gap-2 mt-3"></div>
+                            <span class="text-red-500 text-xs mt-1 hidden" id="dp-resp-internal-error">At least one responsible person is required.</span>
+                        </div>
+                        
+                        <!-- Accountable Person (Internal) -->
+                        <div>
+                            <label for="dp-acc-internal" class="block text-sm font-medium text-gray-700 mb-1">Accountable Person (Internal) <span class="text-red-500">*</span></label>
+                            <select id="dp-acc-internal" class="w-full p-2 border border-gray-300 rounded-lg" data-validate="requiredIf:dp-action-required,true">
+                                <option value="">Select accountable person...</option>
+                                <!-- Options populated by JS -->
+                            </select>
+                            <span class="text-red-500 text-xs mt-1 hidden" data-error-for="dp-acc-internal">Please select an accountable person.</span>
+                        </div>
+                        
+                        <!-- Responsible / Accountable (External) - Simplified for demo -->
+                        <div>
+                            <label for="dp-resp-external" class="block text-sm font-medium text-gray-700 mb-1">Responsible/Accountable (External)</label>
+                            <input type="text" id="dp-resp-external" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Name, Org, Role (if any)">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Target Due Date -->
+                            <div>
+                                <label for="dp-due-date" class="block text-sm font-medium text-gray-700 mb-1">Target Due Date <span class="text-red-500">*</span></label>
+                                <input type="date" id="dp-due-date" class="w-full p-2 border border-gray-300 rounded-lg" data-validate="requiredIf:dp-action-required,true">
+                                <span class="text-red-500 text-xs mt-1 hidden" data-error-for="dp-due-date">Due date is required.</span>
+                            </div>
+                            
+                            <!-- Priority -->
+                            <div>
+                                <label for="dp-priority" class="block text-sm font-medium text-gray-700 mb-1">Priority <span class="text-red-500">*</span></label>
+                                <select id="dp-priority" class="w-full p-2 border border-gray-300 rounded-lg" data-validate="requiredIf:dp-action-required,true">
+                                    <option value="Medium">Medium</option>
+                                    <option value="High">High</option>
+                                    <option value="Low">Low</option>
+                                </select>
+                                <span class="text-red-500 text-xs mt-1 hidden" data-error-for="dp-priority">Priority is required.</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Status (only when editing) -->
+                        <div id="dp-status-container" class="hidden">
+                            <label for="dp-status" class="block text-sm font-medium text-gray-700 mb-1">Action Status</label>
+                            <select id="dp-status" class="w-full p-2 border border-gray-300 rounded-lg">
+                                <option value="Not Started">Not Started</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Pending Review">Pending Review</option>
+                                <option value="Blocked">Blocked</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="flex justify-end items-center p-5 border-t space-x-3">
+                    <button type="button" class="close-modal-btn bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300" data-modal-id="add-discussion-point-modal">Cancel</button>
+                    <button type="submit" id="discussion-form-submit-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Add Point</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Modal: Upload Evidence -->
+    <div id="upload-evidence-modal" class="modal fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 opacity-0 pointer-events-none">
+        <div class="modal-content bg-white w-full max-w-lg rounded-lg shadow-xl max-h-[90vh] overflow-y-auto transform scale-95">
+            <form id="upload-evidence-form" novalidate>
+                <input type="hidden" id="evidence-target-type"> <!-- 'actionItem' or 'meeting' -->
+                <input type="hidden" id="evidence-target-id">
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center p-5 border-b">
+                    <h3 id="upload-evidence-title" class="text-2xl font-bold">Upload Evidence</h3>
+                    <button type="button" class="close-modal-btn p-1 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-600" data-modal-id="upload-evidence-modal">
+                        <span data-lucide="x" class="h-6 w-6"></span>
+                    </button>
+                </div>
+                <!-- Modal Body -->
+                <div class="p-6 space-y-6">
+                    <!-- Simulated File Upload -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">File Upload (Demo)</label>
+                        <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md cursor-pointer" id="evidence-dropzone">
+                            <div class="space-y-1 text-center">
+                                <span data-lucide="upload-cloud" class="mx-auto h-12 w-12 text-gray-400"></span>
+                                <p class="text-sm text-gray-600">
+                                    <span class="font-medium text-blue-600 hover:text-blue-500">Click to upload</span> or drag and drop
+                                </p>
+                                <p class="text-xs text-gray-500">PNG, JPG, PDF, MP4 (Simulated)</p>
+                            </div>
+                            <input id="evidence-file-input" type="file" class="hidden">
+                        </div>
+                        <p id="evidence-file-name" class="text-sm text-gray-600 mt-2"></p>
+                    </div>
+                    <!-- Link Input -->
+                    <div>
+                        <label for="evidence-link" class="block text-sm font-medium text-gray-700 mb-1">Or add a link (URL)</label>
+                        <input type="url" id="evidence-link" placeholder="https://example.com/proof" class="w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <!-- Notes -->
+                    <div>
+                        <label for="evidence-notes" class="block text-sm font-medium text-gray-700 mb-1">Notes/Description</label>
+                        <textarea id="evidence-notes" rows="3" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Describe the evidence..."></textarea>
+                    </div>
+                    <span class="text-red-500 text-xs mt-1 hidden" id="evidence-error">Please provide a file (simulated) or a link.</span>
+                </div>
+                <!-- Modal Footer -->
+                <div class="flex justify-end items-center p-5 border-t space-x-3">
+                    <button type="button" class="close-modal-btn bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300" data-modal-id="upload-evidence-modal">Cancel</button>
+                    <button type="submit" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Add Evidence</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast-notification" class="fixed top-5 right-5 z-[100] transform translate-x-full transition-transform duration-300 ease-in-out">
+        <div class="flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow-xl" role="alert">
+            <div id="toast-icon" class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg">
+                <span data-lucide="check" class="h-5 w-5"></span>
+            </div>
+            <div id="toast-message" class="ms-3 text-sm font-normal">Item moved successfully.</div>
+            <button type="button" id="toast-close-btn" class="ms-auto -mx-1.5 -my-1.5 bg-white text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex items-center justify-center h-8 w-8">
+                <span data-lucide="x" class="h-5 w-5"></span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Alert/Message Modal -->
+    <div id="alert-modal" class="modal fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 opacity-0 pointer-events-none">
+        <div class="modal-content bg-white w-full max-w-sm rounded-lg shadow-xl transform scale-95">
+            <div class="p-6 text-center">
+                <span id="alert-icon" class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                    <span data-lucide="alert-triangle" class="h-6 w-6 text-red-600"></span>
+                </span>
+                <h3 id="alert-title" class="mt-4 text-lg font-medium text-gray-900">Confirmation</h3>
+                <p id="alert-message" class="mt-2 text-sm text-gray-600">Are you sure?</p>
+                <div class="mt-6 flex justify-center gap-4">
+                    <button type="button" id="alert-cancel-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
+                    <button type="button" id="alert-confirm-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== JavaScript Application ===== -->
+    
+    <!-- Load Lucide Icons first -->
+    <script src="https://unpkg.com/lucide@0.395.0/dist/umd/lucide.min.js"></script>
+    
+    <!-- Then run the app script -->
+    <script>
+        // document.addEventListener('DOMContentLoaded', () => { // Wrapper Removed
+
+            // --- STATE & DATABASE ---
+            let db = {
+                users: [],
+                meetings: [],
+                discussionPoints: []
+            };
+
+            let state = {
+                currentMeetingId: null,
+                currentMeetingObject: null,
+                currentMeetingAttendees: [],
+                currentDiscussionPointFilter: 'all',
+                selectedInternalAttendees: [],
+                selectedExternalAttendees: [],
+                selectedRespInternal: [],
+                evidenceContext: { type: null, id: null },
+                alertCallback: null,
+            };
+
+            // --- CONSTANTS ---
+            const USER_MASTER_KEY = 'mom_users_db';
+            const MEETINGS_KEY = 'mom_meetings_db';
+            const DISCUSSION_POINTS_KEY = 'mom_discussion_points_db';
+
+            const STATUS_COLORS = {
+                // Meeting Statuses
+                'Scheduled': 'bg-blue-100 text-blue-800',
+                'In Progress': 'bg-yellow-100 text-yellow-800',
+                'Completed': 'bg-green-100 text-green-800',
+                'Draft': 'bg-gray-100 text-gray-800',
+                'Under Review': 'bg-purple-100 text-purple-800',
+                'Finalized': 'bg-green-200 text-green-900',
+                'Cancelled': 'bg-red-100 text-red-800',
+                // Action Statuses
+                'Not Started': 'bg-gray-200 text-gray-700',
+                'Overdue': 'bg-red-200 text-red-900',
+                'Blocked': 'bg-orange-200 text-orange-900',
+                'Pending Review': 'bg-yellow-200 text-yellow-900',
+            };
+            
+            const PRIORITY_ICONS = {
+                'High': '<span data-lucide="chevrons-up" class="w-4 h-4 text-red-500"></span>',
+                'Medium': '<span data-lucide="equal" class="w-4 h-4 text-yellow-500"></span>',
+                'Low': '<span data-lucide="chevrons-down" class="w-4 h-4 text-green-500"></span>',
+            };
+            
+            // --- DOM Elements ---
+            // Pages
+            const meetingListPage = document.getElementById('meeting-list-page');
+            const meetingViewPage = document.getElementById('meeting-view-page');
+            // List Page
+            const meetingListContainer = document.getElementById('meeting-list-container');
+            const openScheduleMeetingModalBtn = document.getElementById('open-schedule-meeting-modal');
+            const filterSearch = document.getElementById('filter-search');
+            const filterStatus = document.getElementById('filter-status');
+            const filterType = document.getElementById('filter-type');
+            const filterDate = document.getElementById('filter-date');
+            // View Page
+            const backToListBtn = document.getElementById('back-to-list-btn');
+            const meetingInfoHeader = document.getElementById('meeting-info-header');
+            const kpiDashboard = document.getElementById('kpi-dashboard');
+            const openAddDiscussionModalBtn = document.getElementById('open-add-discussion-modal');
+            const discussionListContainer = document.getElementById('discussion-list-container');
+            const discussionFilterBtnContainer = document.querySelector('.discussion-filter-btn').parentElement;
+            const openUploadMeetingEvidenceModalBtn = document.getElementById('open-upload-meeting-evidence-modal');
+            const meetingEvidenceList = document.getElementById('meeting-evidence-list');
+            // Modals
+            const createMeetingModal = document.getElementById('create-meeting-modal');
+            const addDiscussionPointModal = document.getElementById('add-discussion-point-modal');
+            const uploadEvidenceModal = document.getElementById('upload-evidence-modal');
+            const alertModal = document.getElementById('alert-modal');
+            // Toast
+            const toast = document.getElementById('toast-notification');
+            const toastMessage = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+            const toastCloseBtn = document.getElementById('toast-close-btn');
+            // Create Meeting Form
+            const createMeetingForm = document.getElementById('create-meeting-form');
+            const meetingTitle = document.getElementById('meeting-title');
+            const meetingType = document.getElementById('meeting-type');
+            const locationInputsContainer = document.getElementById('location-inputs-container');
+            const locationPhysicalInput = document.getElementById('location-physical-input');
+            const locationGpsInput = document.getElementById('location-gps-input');
+            const locationVirtualInput = document.getElementById('location-virtual-input');
+            const getGpsBtn = document.getElementById('get-gps-btn');
+            const meetingFullDay = document.getElementById('meeting-full-day');
+            const meetingStart = document.getElementById('meeting-start');
+            const meetingEnd = document.getElementById('meeting-end');
+            const meetingEndContainer = document.getElementById('meeting-end-container');
+            const internalAttendeeSearch = document.getElementById('internal-attendee-search');
+            const internalAttendeeResults = document.getElementById('internal-attendee-results');
+            const internalAttendeeChips = document.getElementById('internal-attendee-chips');
+            const addExternalAttendeeBtn = document.getElementById('add-external-attendee');
+            const externalAttendeesContainer = document.getElementById('external-attendees-container');
+            // Discussion Point Form
+            const discussionPointForm = document.getElementById('discussion-point-form');
+            const discussionPointId = document.getElementById('discussion-point-id');
+            const discussionModalTitle = document.getElementById('discussion-modal-title');
+            const dpRaisedByType = document.getElementById('dp-raised-by-type');
+            const dpSummary = document.getElementById('dp-summary');
+            const dpActionRequiredToggle = document.getElementById('dp-action-required-toggle');
+            const dpActionDetails = document.getElementById('dp-action-details');
+            const dpActionDesc = document.getElementById('dp-action-desc');
+            const dpRespInternalSearch = document.getElementById('dp-resp-internal-search');
+            const dpRespInternalResults = document.getElementById('dp-resp-internal-results');
+            const dpRespInternalChips = document.getElementById('dp-resp-internal-chips');
+            const dpAccInternal = document.getElementById('dp-acc-internal');
+            const dpRespExternal = document.getElementById('dp-resp-external');
+            const dpDueDate = document.getElementById('dp-due-date');
+            const dpPriority = document.getElementById('dp-priority');
+            const dpStatusContainer = document.getElementById('dp-status-container');
+            const dpStatus = document.getElementById('dp-status');
+            const discussionFormSubmitBtn = document.getElementById('discussion-form-submit-btn');
+            // Evidence Form
+            const uploadEvidenceForm = document.getElementById('upload-evidence-form');
+            const uploadEvidenceTitle = document.getElementById('upload-evidence-title');
+            const evidenceTargetType = document.getElementById('evidence-target-type');
+            const evidenceTargetId = document.getElementById('evidence-target-id');
+            const evidenceDropzone = document.getElementById('evidence-dropzone');
+            const evidenceFileInput = document.getElementById('evidence-file-input');
+            const evidenceFileName = document.getElementById('evidence-file-name');
+            const evidenceLink = document.getElementById('evidence-link');
+            const evidenceNotes = document.getElementById('evidence-notes');
+            // Alert Modal
+            const alertTitle = document.getElementById('alert-title');
+            const alertMessage = document.getElementById('alert-message');
+            const alertIcon = document.getElementById('alert-icon');
+            const alertCancelBtn = document.getElementById('alert-cancel-btn');
+            const alertConfirmBtn = document.getElementById('alert-confirm-btn');
+
+            // --- INITIALIZATION ---
+
+            function init() {
+                loadData();
+                renderMeetingList();
+                initGlobalListeners();
+                initCreateMeetingForm();
+                initDiscussionPointForm();
+                initEvidenceForm();
+                // Render icons
+                lucide.createIcons();
+                // Set default user avatar
+                document.getElementById('user-avatar').textContent = db.users[0]?.name.split(' ').map(n => n[0]).join('') || 'U';
+            }
+
+            function loadData() {
+                const users = localStorage.getItem(USER_MASTER_KEY);
+                const meetings = localStorage.getItem(MEETINGS_KEY);
+                const dps = localStorage.getItem(DISCUSSION_POINTS_KEY);
+
+                if (!users || JSON.parse(users).length === 0) {
+                    initDemoData();
+                } else {
+                    db.users = JSON.parse(users);
+                    db.meetings = JSON.parse(meetings);
+                    db.discussionPoints = JSON.parse(dps);
+                }
+            }
+
+            function saveData() {
+                localStorage.setItem(USER_MASTER_KEY, JSON.stringify(db.users));
+                localStorage.setItem(MEETINGS_KEY, JSON.stringify(db.meetings));
+                localStorage.setItem(DISCUSSION_POINTS_KEY, JSON.stringify(db.discussionPoints));
+            }
+
+            function initDemoData() {
+                db.users = [
+                    { id: 'u1', name: 'Alice Smith', organization: 'Engineering', role: 'Sr. Developer' },
+                    { id: 'u2', name: 'Bob Johnson', organization: 'Product', role: 'Product Manager' },
+                    { id: 'u3', name: 'Charlie Brown', organization: 'Design', role: 'UX/UI Designer' },
+                    { id: 'u4', name: 'David Lee', organization: 'Engineering', role: 'Tech Lead' },
+                    { id: 'u5', name: 'Emily White', organization: 'Marketing', role: 'Marketing Manager' },
+                    { id: 'u6', name: 'Frank Black', organization: 'QA', role: 'QA Engineer' },
+                    { id: 'u7', name: 'Grace Hall', organization: 'Management', role: 'Director' },
+                    { id: 'u8', name: 'Henry Green', organization: 'Sales', role: 'Account Executive' },
+                    { id: 'u9', name: 'Ivy King', organization: 'Support', role: 'Support Specialist' },
+                    { id: 'u10', name: 'Jack Quick', organization: 'DevOps', role: 'SRE' }
+                ];
+
+                db.meetings = [
+                    {
+                        id: 'm1',
+                        title: 'Q4 Sprint Planning',
+                        type: 'Planning',
+                        location: { type: 'virtual', value: 'https://meet.google.com/demo-link' },
+                        start: '2025-10-28T10:00',
+                        end: '2025-10-28T11:30',
+                        isFullDay: false,
+                        internalAttendees: ['u1', 'u2', 'u3', 'u4'],
+                        externalAttendees: [],
+                        status: 'Finalized',
+                        meetingEvidence: [
+                            { id: 'me1', name: 'Sprint_Planning_Slides.pdf', url: '#', type: 'link', notes: 'Presentation slides', timestamp: new Date().toISOString() }
+                        ]
+                    },
+                    {
+                        id: 'm2',
+                        title: 'Client Demo - Acme Corp',
+                        type: 'Client Meeting',
+                        location: { type: 'physical', value: 'Client HQ, 123 Main St' },
+                        start: '2025-10-29T14:00',
+                        end: '2025-10-29T15:00',
+                        isFullDay: false,
+                        internalAttendees: ['u2', 'u8', 'u7'],
+                        externalAttendees: [
+                            { name: 'Eve External', organization: 'Acme Corp', role: 'Stakeholder' },
+                            { name: 'Adam Client', organization: 'Acme Corp', role: 'Project Manager' }
+                        ],
+                        status: 'Completed',
+                        meetingEvidence: []
+                    },
+                    {
+                        id: 'm3',
+                        title: 'Weekly Team Sync',
+                        type: 'Team Sync',
+                        location: { type: 'virtual', value: 'https://zoom.us/demo-link' },
+                        start: '2025-10-30T09:00',
+                        end: '2025-10-30T09:30',
+                        isFullDay: false,
+                        internalAttendees: ['u1', 'u4', 'u6', 'u10'],
+                        externalAttendees: [],
+                        status: 'Scheduled',
+                        meetingEvidence: []
+                    },
+                    {
+                        id: 'm4',
+                        title: 'New Feature Design Review',
+                        type: 'Review',
+                        location: { type: 'gps', value: '12.9716° N, 77.5946° E (Café)' },
+                        start: '2025-11-01T11:00',
+                        end: '2025-11-01T12:00',
+                        isFullDay: false,
+                        internalAttendees: ['u2', 'u3', 'u4'],
+                        externalAttendees: [],
+                        status: 'Scheduled',
+                        meetingEvidence: []
+                    }
+                ];
+
+                db.discussionPoints = [
+                    // For Meeting m1 (Finalized)
+                    {
+                        id: 'dp1',
+                        meetingId: 'm1',
+                        raisedBy: { type: 'internal', value: 'u2' },
+                        summary: '<div>Discussion about the new login feature. We need to prioritize it for this sprint.</div>',
+                        actionRequired: true,
+                        actionDetails: {
+                            description: 'Develop the new login flow (FE and BE).',
+                            responsibleInternal: ['u1', 'u4'],
+                            responsibleExternal: null,
+                            accountableInternal: 'u2',
+                            accountableExternal: null,
+                            dueDate: '2025-11-10',
+                            priority: 'High',
+                            status: 'Completed',
+                            evidence: [
+                                { id: 'ev1', name: 'PR #123', url: '#', type: 'link', notes: 'Pull Request for backend', timestamp: new Date().toISOString() },
+                                { id: 'ev2', name: 'PR #124', url: '#', type: 'link', notes: 'Pull Request for frontend', timestamp: new Date().toISOString() }
+                            ]
+                        },
+                        timestamp: '2025-10-28T10:15:00Z'
+                    },
+                    {
+                        id: 'dp2',
+                        meetingId: 'm1',
+                        raisedBy: { type: 'internal', value: 'u3' },
+                        summary: '<div>Finalized the design for the dashboard widgets. Ready for implementation.</div>',
+                        actionRequired: false,
+                        actionDetails: null,
+                        timestamp: '2025-10-28T10:30:00Z'
+                    },
+                    // For Meeting m2 (Completed)
+                    {
+                        id: 'dp3',
+                        meetingId: 'm2',
+                        raisedBy: { type: 'external', value: 'Eve External' },
+                        summary: '<div>Client requested a new report generation feature.</div>',
+                        actionRequired: true,
+                        actionDetails: {
+                            description: 'Scope out the new report feature and provide an estimate.',
+                            responsibleInternal: ['u2'],
+                            responsibleExternal: null,
+                            accountableInternal: 'u7',
+                            accountableExternal: null,
+                            dueDate: '2025-10-29', // Overdue!
+                            priority: 'Medium',
+                            status: 'Not Started',
+                            evidence: []
+                        },
+                        timestamp: '2025-10-29T14:30:00Z'
+                    },
+                    {
+                        id: 'dp4',
+                        meetingId: 'm2',
+                        raisedBy: { type: 'internal', value: 'u8' },
+                        summary: '<div>Client was very happy with the demo, especially the new analytics module.</div>',
+                        actionRequired: false,
+                        actionDetails: null,
+                        timestamp: '2025-10-29T14:45:00Z'
+                    }
+                ];
+                saveData();
+            }
+
+            // --- NAVIGATION ---
+            
+            function showPage(pageId) {
+                meetingListPage.classList.toggle('hidden', pageId !== 'meeting-list-page');
+                meetingViewPage.classList.toggle('hidden', pageId !== 'meeting-view-page');
+                window.scrollTo(0, 0);
+            }
+
+            function navigateToMeeting(meetingId) {
+                state.currentMeetingId = meetingId;
+                state.currentMeetingObject = db.meetings.find(m => m.id === meetingId);
+                if (!state.currentMeetingObject) {
+                    showToast('Error: Meeting not found.', 'error');
+                    return;
+                }
+                
+                // Collect all attendee objects for this meeting
+                state.currentMeetingAttendees = [
+                    ...state.currentMeetingObject.internalAttendees.map(getUserById),
+                    ...state.currentMeetingObject.externalAttendees.map(ext => ({
+                        id: ext.name.toLowerCase().replace(' ', '_'),
+                        name: ext.name,
+                        organization: ext.organization,
+                        role: ext.role,
+                        isExternal: true
+                    }))
+                ];
+                
+                renderMeetingView(meetingId);
+                showPage('meeting-view-page');
+            }
+
+            function navigateToList() {
+                state.currentMeetingId = null;
+                state.currentMeetingObject = null;
+                state.currentMeetingAttendees = [];
+                state.currentDiscussionPointFilter = 'all';
+                renderMeetingList();
+                showPage('meeting-list-page');
+            }
+
+            // --- RENDER FUNCTIONS (LIST PAGE) ---
+
+            function renderMeetingList() {
+                const filters = {
+                    search: filterSearch.value.toLowerCase(),
+                    status: filterStatus.value,
+                    type: filterType.value,
+                    date: filterDate.value
+                };
+
+                let filteredMeetings = db.meetings.filter(meeting => {
+                    const searchMatch = !filters.search ||
+                        meeting.title.toLowerCase().includes(filters.search) ||
+                        meeting.location.value.toLowerCase().includes(filters.search) ||
+                        meeting.internalAttendees.some(id => getUserById(id)?.name.toLowerCase().includes(filters.search)) ||
+                        meeting.externalAttendees.some(ext => ext.name.toLowerCase().includes(filters.search));
+                    
+                    const statusMatch = !filters.status || meeting.status === filters.status;
+                    const typeMatch = !filters.type || meeting.type === filters.type;
+                    const dateMatch = !filters.date || meeting.start.startsWith(filters.date);
+                    
+                    return searchMatch && statusMatch && typeMatch && dateMatch;
+                });
+                
+                // Sort by start date, newest first
+                filteredMeetings.sort((a, b) => new Date(b.start) - new Date(a.start));
+
+                if (filteredMeetings.length === 0) {
+                    meetingListContainer.innerHTML = `<div class="col-span-1 md:col-span-2 lg:col-span-3 text-center text-gray-500 py-10">
+                        <span data-lucide="search-x" class="mx-auto h-12 w-12 text-gray-400"></span>
+                        <h3 class="mt-2 text-lg font-semibold">No Meetings Found</h3>
+                        <p class="mt-1 text-sm">Try adjusting your filters or schedule a new meeting.</p>
+                    </div>`;
+                    lucide.createIcons();
+                    return;
+                }
+
+                meetingListContainer.innerHTML = filteredMeetings.map(createMeetingCardHTML).join('');
+                // Add event listeners to new cards
+                meetingListContainer.querySelectorAll('.meeting-card').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        // Prevent click from triggering if user clicks on a button/link inside card
+                        if (e.target.closest('button') || e.target.closest('a')) {
+                            return;
+                        }
+                        navigateToMeeting(card.dataset.meetingId);
+                    });
+                });
+                
+                lucide.createIcons();
+            }
+
+            function createMeetingCardHTML(meeting) {
+                const statusColor = STATUS_COLORS[meeting.status] || 'bg-gray-100 text-gray-800';
+                const attendees = [
+                    ...meeting.internalAttendees.map(getUserById),
+                    ...meeting.externalAttendees.map(ext => ({ name: ext.name, isExternal: true }))
+                ].filter(Boolean); // Filter out any null/undefined users
+                
+                const attendeeCount = attendees.length;
+                
+                const attendeeAvatars = attendees.slice(0, 4).map((att, index) => {
+                    const zIndex = 4 - index;
+                    const initials = att.name.split(' ').map(n => n[0]).join('');
+                    const color = att.isExternal ? 'bg-gray-400 text-white' : 'bg-blue-100 text-blue-700';
+                    return `<span class="flex h-8 w-8 items-center justify-center rounded-full ${color} font-semibold border-2 border-white" style="z-index: ${zIndex}; margin-left: -0.5rem;">${initials}</span>`;
+                }).join('');
+
+                const locationIcon = meeting.location.type === 'virtual' ? 'video' : (meeting.location.type === 'gps' ? 'map-pin' : 'building-2');
+                
+                return `
+                    <div class="meeting-card bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer" data-meeting-id="${meeting.id}">
+                        <!-- Card Header -->
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${statusColor}">
+                                ${meeting.status}
+                            </span>
+                            <span class="text-xs text-gray-500">${meeting.type}</span>
+                        </div>
+                        
+                        <!-- Title -->
+                        <h2 class="text-xl font-bold text-gray-900 truncate mb-2" title="${meeting.title}">${meeting.title}</h2>
+                        
+                        <!-- Date & Location -->
+                        <div class="text-sm text-gray-600 space-y-2 mb-4">
+                            <div class="flex items-center gap-2">
+                                <span data-lucide="calendar" class="w-4 h-4 text-gray-500"></span>
+                                <span>${formatDate(meeting.start, true)}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span data-lucide="${locationIcon}" class="w-4 h-4 text-gray-500"></span>
+                                <span class="truncate" title="${meeting.location.value}">${meeting.location.value}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer: Attendees & Action -->
+                        <div class="flex justify-between items-center pt-4 border-t border-gray-100">
+                            <div class="flex items-center">
+                                <div class="flex items-center pl-2">
+                                    ${attendeeAvatars}
+                                    ${attendeeCount > 4 ? `<span class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-gray-700 font-semibold border-2 border-white" style="z-index: 0; margin-left: -0.5rem;">+${attendeeCount - 4}</span>` : ''}
+                                </div>
+                            </div>
+                            <button class="text-sm font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                                View Details
+                                <span data-lucide="arrow-right" class="w-4 h-4"></span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // --- RENDER FUNCTIONS (VIEW PAGE) ---
+
+            function renderMeetingView(meetingId) {
+                const meeting = db.meetings.find(m => m.id === meetingId);
+                if (!meeting) return;
+
+                const discussionPoints = db.discussionPoints.filter(dp => dp.meetingId === meetingId);
+
+                renderMeetingInfoHeader(meeting);
+                renderKpiDashboard(discussionPoints);
+                renderDiscussionList(discussionPoints);
+                renderMeetingEvidence(meeting);
+                
+                lucide.createIcons();
+            }
+
+            function renderMeetingInfoHeader(meeting) {
+                const attendees = [
+                    ...meeting.internalAttendees.map(getUserById),
+                    ...meeting.externalAttendees.map(ext => ({ name: ext.name, organization: ext.organization, role: ext.role, isExternal: true }))
+                ].filter(Boolean);
+
+                const statusColor = STATUS_COLORS[meeting.status] || 'bg-gray-100 text-gray-800';
+                const locationIcon = meeting.location.type === 'virtual' ? 'video' : (meeting.location.type === 'gps' ? 'map-pin' : 'building-2');
+                const duration = meeting.isFullDay ? 'Full Day' : `${formatTime(meeting.start)} - ${formatTime(meeting.end)}`;
+
+                meetingInfoHeader.innerHTML = `
+                    <div class="flex flex-col md:flex-row justify-between md:items-start gap-4">
+                        <div>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${statusColor} mb-2">
+                                ${meeting.status}
+                            </span>
+                            <h1 class="text-3xl font-bold text-gray-900 mb-2">${meeting.title}</h1>
+                            <div class="flex flex-wrap gap-x-6 gap-y-3 text-gray-600">
+                                <div class="flex items-center gap-2" title="Date">
+                                    <span data-lucide="calendar" class="w-5 h-5 text-gray-500"></span>
+                                    <span>${formatDate(meeting.start, false)}</span>
+                                </div>
+                                <div class="flex items-center gap-2" title="Time">
+                                    <span data-lucide="clock" class="w-5 h-5 text-gray-500"></span>
+                                    <span>${duration}</span>
+                                </div>
+                                <div class="flex items-center gap-2" title="Type">
+                                    <span data-lucide="tag" class="w-5 h-5 text-gray-500"></span>
+                                    <span>${meeting.type}</span>
+                                </div>
+                                <div class="flex items-center gap-2" title="Location">
+                                    <span data-lucide="${locationIcon}" class="w-5 h-5 text-gray-500"></span>
+                                    <span class="truncate">${meeting.location.value}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <!-- Meeting Actions (e.g., Edit, Change Status) -->
+                            <select id="meeting-status-changer" data-meeting-id="${meeting.id}" class="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                ${['Scheduled', 'In Progress', 'Completed', 'Draft', 'Under Review', 'Finalized', 'Cancelled'].map(s => `
+                                    <option value="${s}" ${meeting.status === s ? 'selected' : ''}>${s}</option>
+                                `).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-6 pt-6 border-t">
+                        <h3 class="text-lg font-semibold mb-3">Attendees (${attendees.length})</h3>
+                        <div class="flex flex-wrap gap-4">
+                            ${attendees.map(att => `
+                                <div class="flex items-center gap-2" title="${att.organization || ''} - ${att.role || ''}">
+                                    <span class="flex h-10 w-10 items-center justify-center rounded-full ${att.isExternal ? 'bg-gray-400 text-white' : 'bg-blue-100 text-blue-700'} font-semibold text-sm">
+                                        ${att.name.split(' ').map(n => n[0]).join('')}
+                                    </span>
+                                    <div>
+                                        <div class="font-medium">${att.name} ${att.isExternal ? '(External)' : ''}</div>
+                                        <div class="text-xs text-gray-500">${att.role || 'N/A'}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                
+                // Add listener for status change
+                document.getElementById('meeting-status-changer').addEventListener('change', (e) => {
+                    const newStatus = e.target.value;
+                    const meetingId = e.target.dataset.meetingId;
+                    const meeting = db.meetings.find(m => m.id === meetingId);
+                    if (meeting) {
+                        meeting.status = newStatus;
+                        saveData();
+                        renderMeetingInfoHeader(meeting); // Re-render header to update badge
+                        showToast(`Meeting status updated to "${newStatus}"`, 'success');
+                        lucide.createIcons();
+                    }
+                });
+            }
+
+            function renderKpiDashboard(discussionPoints) {
+                const totalPoints = discussionPoints.length;
+                const actionItems = discussionPoints.filter(dp => dp.actionRequired);
+                const totalActions = actionItems.length;
+                
+                const now = new Date();
+                const completedActions = actionItems.filter(dp => dp.actionDetails.status === 'Completed').length;
+                const overdueActions = actionItems.filter(dp => 
+                    dp.actionDetails.status !== 'Completed' && 
+                    dp.actionDetails.status !== 'Cancelled' &&
+                    new Date(dp.actionDetails.dueDate) < now
+                ).length;
+                const inProgressActions = actionItems.filter(dp => dp.actionDetails.status === 'In Progress').length;
+                const notStartedActions = actionItems.filter(dp => dp.actionDetails.status === 'Not Started').length;
+
+                const kpis = [
+                    { id: 'all', label: 'Total Points', value: totalPoints, color: 'text-blue-600', icon: 'message-square' },
+                    { id: 'action', label: 'Action Items', value: totalActions, color: 'text-purple-600', icon: 'alert-circle' },
+                    { id: 'completed', label: 'Completed', value: completedActions, color: 'text-green-600', icon: 'check-circle' },
+                    { id: 'overdue', label: 'Overdue', value: overdueActions, color: 'text-red-600', icon: 'clock' },
+                    { id: 'in-progress', label: 'In Progress', value: inProgressActions, color: 'text-yellow-600', icon: 'loader' },
+                    { id: 'not-started', label: 'Not Started', value: notStartedActions, color: 'text-gray-600', icon: 'circle-dashed' },
+                ];
+                
+                // Custom dashboard for 5 items
+                kpiDashboard.innerHTML = `
+                    <div data-filter="all" class="kpi-card col-span-2 md:col-span-1 lg:col-span-1 bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow">
+                        <div class="flex items-center gap-3">
+                            <span data-lucide="hash" class="w-8 h-8 text-blue-500"></span>
+                            <div>
+                                <div class="text-2xl font-bold ${kpis[0].color}">${kpis[0].value}</div>
+                                <div class="text-sm text-gray-500">${kpis[0].label}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div data-filter="action" class="kpi-card col-span-2 md:col-span-2 lg:col-span-1 bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow">
+                        <div class="flex items-center gap-3">
+                            <span data-lucide="alert-circle" class="w-8 h-8 text-purple-500"></span>
+                            <div>
+                                <div class="text-2xl font-bold ${kpis[1].color}">${kpis[1].value}</div>
+                                <div class="text-sm text-gray-500">${kpis[1].label}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div data-filter="completed" class="kpi-card col-span-1 md:col-span-1 lg:col-span-1 bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow">
+                        <div class="text-sm text-gray-500">${kpis[2].label}</div>
+                        <div class="text-2xl font-bold ${kpis[2].color}">${kpis[2].value}</div>
+                    </div>
+                    <div data-filter="overdue" class="kpi-card col-span-1 md:col-span-1 lg:col-span-1 bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow">
+                        <div class="text-sm text-gray-500">${kpis[3].label}</div>
+                        <div class="text-2xl font-bold ${kpis[3].color}">${kpis[3].value}</div>
+                    </div>
+                    <div data-filter="in-progress" class="kpi-card col-span-1 md:col-span-1 lg:col-span-1 bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow">
+                        <div classs="text-sm text-gray-500">${kpis[4].label}</div>
+                        <div class="text-2xl font-bold ${kpis[4].color}">${kpis[4].value}</div>
+                    </div>
+                `;
+
+                // Add listeners to KPI cards
+                kpiDashboard.querySelectorAll('.kpi-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const filter = card.dataset.filter;
+                        state.currentDiscussionPointFilter = filter;
+                        // Update button styles
+                        discussionFilterBtnContainer.querySelectorAll('.discussion-filter-btn').forEach(btn => {
+                            btn.classList.toggle('bg-blue-600', btn.dataset.filter === filter);
+                            btn.classList.toggle('text-white', btn.dataset.filter === filter);
+                            btn.classList.toggle('bg-gray-200', btn.dataset.filter !== filter);
+                            btn.classList.toggle('text-gray-700', btn.dataset.filter !== filter);
+                        });
+                        // Re-render list
+                        renderDiscussionList(discussionPoints);
+                    });
+                });
+            }
+
+            function renderDiscussionList(allDiscussionPoints) {
+                let filteredPoints = allDiscussionPoints;
+                const now = new Date();
+                
+                switch (state.currentDiscussionPointFilter) {
+                    case 'all':
+                        filteredPoints = allDiscussionPoints;
+                        break;
+                    case 'action':
+                        filteredPoints = allDiscussionPoints.filter(dp => dp.actionRequired);
+                        break;
+                    case 'completed':
+                        filteredPoints = allDiscussionPoints.filter(dp => dp.actionRequired && dp.actionDetails.status === 'Completed');
+                        break;
+                    case 'overdue':
+                        filteredPoints = allDiscussionPoints.filter(dp => 
+                            dp.actionRequired && 
+                            dp.actionDetails.status !== 'Completed' && 
+                            dp.actionDetails.status !== 'Cancelled' &&
+                            new Date(dp.actionDetails.dueDate) < now
+                        );
+                        break;
+                    case 'in-progress':
+                        filteredPoints = allDiscussionPoints.filter(dp => dp.actionRequired && dp.actionDetails.status === 'In Progress');
+                        break;
+                }
+                
+                // Sort by timestamp, oldest first
+                filteredPoints.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+                if (filteredPoints.length === 0) {
+                    discussionListContainer.innerHTML = `<div class="text-center text-gray-500 py-10">
+                        <span data-lucide="folder-search" class="mx-auto h-12 w-12 text-gray-400"></span>
+                        <h3 class="mt-2 text-lg font-semibold">No Discussion Points Found</h3>
+                        <p class="mt-1 text-sm">No items match your current filter.</p>
+                    </div>`;
+                    lucide.createIcons();
+                    return;
+                }
+                
+                discussionListContainer.innerHTML = filteredPoints.map((dp, index) => createDiscussionCardHTML(dp, index + 1)).join('');
+                lucide.createIcons();
+                
+                // Add event listeners for edit, delete, upload
+                discussionListContainer.querySelectorAll('.edit-dp-btn').forEach(btn => {
+                    btn.addEventListener('click', () => openDiscussionPointModal(btn.dataset.dpId));
+                });
+                discussionListContainer.querySelectorAll('.delete-dp-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        showConfirmation(
+                            'Delete Discussion Point?',
+                            'Are you sure you want to delete this discussion point? This action cannot be undone.',
+                            'Delete',
+                            () => deleteDiscussionPoint(btn.dataset.dpId)
+                        );
+                    });
+                });
+                discussionListContainer.querySelectorAll('.upload-action-evidence-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        openEvidenceModal('actionItem', btn.dataset.dpId);
+                    });
+                });
+            }
+            
+            function createDiscussionCardHTML(dp, index) {
+                let raisedByName = 'Unknown';
+                let raisedByDetails = '';
+                if (dp.raisedBy.type === 'internal') {
+                    const user = getUserById(dp.raisedBy.value);
+                    if (user) {
+                        raisedByName = user.name;
+                        raisedByDetails = `${user.organization} - ${user.role}`;
+                    }
+                } else if (dp.raisedBy.type === 'external') {
+                    raisedByName = dp.raisedBy.value;
+                    raisedByDetails = 'External Attendee';
+                } else {
+                    raisedByName = 'Multiple Participants';
+                    raisedByDetails = 'Group Discussion';
+                }
+                
+                const initials = raisedByName.split(' ').map(n => n[0]).join('');
+                
+                let actionHTML = '';
+                if (dp.actionRequired) {
+                    const ad = dp.actionDetails;
+                    const responsible = [
+                        ...ad.responsibleInternal.map(id => getUserById(id)?.name),
+                        ad.responsibleExternal
+                    ].filter(Boolean).join(', ');
+                    const accountable = getUserById(ad.accountableInternal)?.name || ad.accountableExternal || 'N/A';
+                    
+                    const isOverdue = ad.status !== 'Completed' && ad.status !== 'Cancelled' && new Date(ad.dueDate) < new Date();
+                    const statusColor = isOverdue ? STATUS_COLORS['Overdue'] : (STATUS_COLORS[ad.status] || 'bg-gray-100 text-gray-800');
+                    
+                    const evidenceHTML = ad.evidence.map(ev => `
+                        <li class="flex items-center justify-between text-sm py-1">
+                            <a href="${ev.url}" target="_blank" class="flex items-center gap-2 text-blue-600 hover:underline truncate" title="${ev.notes}">
+                                <span data-lucide="${ev.type === 'link' ? 'link' : 'file'}" class="w-4 h-4"></span>
+                                <span class="truncate">${ev.name}</span>
+                            </a>
+                            <span class="text-xs text-gray-400 flex-shrink-0 ml-2">${formatDate(ev.timestamp, true)}</span>
+                        </li>
+                    `).join('');
+
+                    actionHTML = `
+                        <div class="mt-4 pt-4 border-t border-gray-200">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="font-semibold text-gray-800">Action Item</h4>
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${statusColor}">
+                                    ${isOverdue ? 'Overdue' : ad.status}
+                                </span>
+                            </div>
+                            <p class="text-gray-700 mb-4">${ad.description}</p>
+                            
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm mb-4">
+                                <div>
+                                    <div class="text-xs text-gray-500 font-medium uppercase">Responsible</div>
+                                    <div class="font-semibold truncate" title="${responsible}">${responsible}</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-500 font-medium uppercase">Accountable</div>
+                                    <div class="font-semibold truncate" title="${accountable}">${accountable}</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-500 font-medium uppercase">Due Date</div>
+                                    <div class="font-semibold ${isOverdue ? 'text-red-600' : ''}">${formatDate(ad.dueDate, false)}</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-500 font-medium uppercase">Priority</div>
+                                    <div class="font-semibold flex items-center gap-1">
+                                        ${PRIORITY_ICONS[ad.priority]}
+                                        ${ad.priority}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Evidence Section -->
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <h5 class="text-sm font-semibold text-gray-700">Evidence (${ad.evidence.length})</h5>
+                                    <button class="upload-action-evidence-btn text-xs flex items-center gap-1 text-blue-600 hover:underline" data-dp-id="${dp.id}">
+                                        <span data-lucide="plus" class="w-3 h-3"></span> Add
+                                    </button>
+                                </div>
+                                <ul class="space-y-1">
+                                    ${evidenceHTML || '<li class="text-xs text-gray-500">No evidence provided.</li>'}
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="border border-gray-200 rounded-lg overflow-hidden">
+                        <!-- Card Header -->
+                        <div class="bg-gray-50 p-4 flex justify-between items-start">
+                            <div class="flex items-center gap-3">
+                                <span class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-gray-700 font-semibold text-sm">
+                                    ${initials}
+                                </span>
+                                <div>
+                                    <div class="font-semibold">${raisedByName}</div>
+                                    <div class="text-xs text-gray-500">${raisedByDetails}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-gray-400">${formatTime(dp.timestamp)}</span>
+                                ${dp.actionRequired ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800" title="Action Item">Action</span>' : ''}
+                                <button class="edit-dp-btn p-1 text-gray-500 hover:text-blue-600 rounded-full hover:bg-gray-200" data-dp-id="${dp.id}" title="Edit">
+                                    <span data-lucide="edit-2" class="w-4 h-4"></span>
+                                </button>
+                                <button class="delete-dp-btn p-1 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-200" data-dp-id="${dp.id}" title="Delete">
+                                    <span data-lucide="trash-2" class="w-4 h-4"></span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Card Body -->
+                        <div class="p-4">
+                            <div class="prose prose-sm max-w-none text-gray-800">
+                                ${dp.summary}
+                            </div>
+                            ${actionHTML}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            function renderMeetingEvidence(meeting) {
+                if (meeting.meetingEvidence.length === 0) {
+                    meetingEvidenceList.innerHTML = `<p class="text-sm text-gray-500 text-center py-4">No evidence (e.g., attendance sheets, photos, recordings) has been uploaded for this meeting.</p>`;
+                    return;
+                }
+                
+                meetingEvidenceList.innerHTML = meeting.meetingEvidence.map(ev => `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                        <a href="${ev.url}" target="_blank" class="flex items-center gap-3 truncate" title="${ev.notes}">
+                            <span data-lucide="${ev.type === 'link' ? 'link' : 'file-archive'}" class="w-5 h-5 text-blue-600 flex-shrink-0"></span>
+                            <div class="truncate">
+                                <div class="font-medium text-blue-700 hover:underline truncate">${ev.name}</div>
+                                <div class="text-xs text-gray-600 truncate">${ev.notes || 'No description'}</div>
+                            </div>
+                        </a>
+                        <div class="text-right flex-shrink-0 ml-4">
+                            <div class="text-xs text-gray-500">${formatDate(ev.timestamp, true)}</div>
+                            <button class="delete-meeting-evidence-btn text-xs text-red-500 hover:underline mt-1" data-evidence-id="${ev.id}">Remove</button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                lucide.createIcons();
+                
+                // Add listeners
+                meetingEvidenceList.querySelectorAll('.delete-meeting-evidence-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        showConfirmation('Delete Evidence?', 'Are you sure you want to remove this evidence?', 'Delete', () => {
+                            deleteMeetingEvidence(meeting.id, btn.dataset.evidenceId);
+                        });
+                    });
+                });
+            }
+
+            // --- MODALS & TOAST ---
+            
+            function openModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (!modal) return;
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                modal.querySelector('.modal-content').classList.remove('scale-95');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (!modal) return;
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                modal.querySelector('.modal-content').classList.add('scale-95');
+                document.body.style.overflow = '';
+                
+                // Clear validation errors
+                clearValidationErrors(modal.querySelector('form'));
+            }
+            
+            function showToast(message, type = 'success') {
+                toastMessage.textContent = message;
+                
+                const isError = type === 'error';
+                const iconName = isError ? 'alert-circle' : 'check';
+                const iconClasses = isError ? 'text-red-500 bg-red-100' : 'text-green-500 bg-green-100';
+                
+                toastIcon.innerHTML = `<span data-lucide="${iconName}" class="h-5 w-5"></span>`;
+                toastIcon.className = `inline-flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg ${iconClasses}`;
+                lucide.createIcons();
+
+                toast.classList.remove('translate-x-full');
+                
+                setTimeout(() => {
+                    toast.classList.add('translate-x-full');
+                }, 3000);
+            }
+            
+            function showConfirmation(title, message, confirmText, onConfirm) {
+                alertTitle.textContent = title;
+                alertMessage.textContent = message;
+                alertConfirmBtn.textContent = confirmText;
+                state.alertCallback = onConfirm;
+                
+                alertConfirmBtn.className = 'font-semibold py-2 px-4 rounded-lg text-white ' + (confirmText.toLowerCase() === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700');
+                
+                openModal('alert-modal');
+            }
+
+            // --- GLOBAL EVENT LISTENERS ---
+
+            function initGlobalListeners() {
+                // Close Modals
+                document.querySelectorAll('.close-modal-btn').forEach(btn => {
+                    btn.addEventListener('click', () => closeModal(btn.dataset.modalId));
+                });
+                
+                // Close Modals on overlay click
+                document.querySelectorAll('.modal').forEach(modal => {
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) {
+                            closeModal(modal.id);
+                        }
+                    });
+                });
+                
+                // Toast Close
+                toastCloseBtn.addEventListener('click', () => {
+                    toast.classList.add('translate-x-full');
+                });
+                
+                // Alert Modal
+                alertCancelBtn.addEventListener('click', () => {
+                    closeModal('alert-modal');
+                    state.alertCallback = null;
+                });
+                alertConfirmBtn.addEventListener('click', () => {
+                    if (typeof state.alertCallback === 'function') {
+                        state.alertCallback();
+                    }
+                    closeModal('alert-modal');
+                    state.alertCallback = null;
+                });
+
+                // Page Navigation
+                openScheduleMeetingModalBtn.addEventListener('click', () => openModal('create-meeting-modal'));
+                backToListBtn.addEventListener('click', navigateToList);
+                openAddDiscussionModalBtn.addEventListener('click', () => openDiscussionPointModal(null));
+                openUploadMeetingEvidenceModalBtn.addEventListener('click', () => openEvidenceModal('meeting', state.currentMeetingId));
+                
+                // List Page Filters
+                [filterSearch, filterStatus, filterType, filterDate].forEach(el => {
+                    el.addEventListener('input', renderMeetingList);
+                });
+                
+                // View Page Filters
+                discussionFilterBtnContainer.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.discussion-filter-btn');
+                    if (!btn) return;
+                    
+                    const filter = btn.dataset.filter;
+                    state.currentDiscussionPointFilter = filter;
+                    
+                    // Update styles
+                    discussionFilterBtnContainer.querySelectorAll('.discussion-filter-btn').forEach(b => {
+                        b.classList.toggle('bg-blue-600', b.dataset.filter === filter);
+                        b.classList.toggle('text-white', b.dataset.filter === filter);
+                        b.classList.toggle('bg-gray-200', b.dataset.filter !== filter);
+                        b.classList.toggle('text-gray-700', b.dataset.filter !== filter);
+                    });
+                    
+                    // Update KPI cards to show active
+                    kpiDashboard.querySelectorAll('.kpi-card').forEach(card => {
+                        card.classList.toggle('ring-2', card.dataset.filter === filter);
+                        card.classList.toggle('ring-blue-500', card.dataset.filter === filter);
+                    });
+                    
+                    renderDiscussionList(db.discussionPoints.filter(dp => dp.meetingId === state.currentMeetingId));
+                });
+            }
+
+            // --- FORM: CREATE MEETING ---
+
+            function initCreateMeetingForm() {
+                createMeetingForm.addEventListener('submit', handleCreateMeetingSubmit);
+
+                // Location Picker
+                document.querySelectorAll('input[name="locationType"]').forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        const type = e.target.value;
+                        document.getElementById('location-physical').classList.toggle('hidden', type !== 'physical');
+                        document.getElementById('location-gps').classList.toggle('hidden', type !== 'gps');
+                        document.getElementById('location-virtual').classList.toggle('hidden', type !== 'virtual');
+                    });
+                });
+                
+                getGpsBtn.addEventListener('click', () => {
+                    locationGpsInput.value = '12.9716° N, 77.5946° E (Demo)';
+                });
+
+                // Full Day Toggle
+                meetingFullDay.addEventListener('change', () => {
+                    meetingEndContainer.classList.toggle('hidden', meetingFullDay.checked);
+                    if (meetingFullDay.checked) {
+                        meetingEnd.removeAttribute('data-validate');
+                    } else {
+                        meetingEnd.setAttribute('data-validate', 'required');
+                    }
+                });
+                
+                // Internal Attendee Selector
+                setupAttendeeSelector(
+                    internalAttendeeSearch,
+                    internalAttendeeResults,
+                    internalAttendeeChips,
+                    () => db.users, // Get all users
+                    (user) => {
+                        state.selectedInternalAttendees.push(user.id);
+                        document.getElementById('internal-attendee-error').classList.add('hidden');
+                    },
+                    (userId) => {
+                        state.selectedInternalAttendees = state.selectedInternalAttendees.filter(id => id !== userId);
+                    },
+                    () => state.selectedInternalAttendees
+                );
+
+                // External Attendees
+                addExternalAttendeeBtn.addEventListener('click', () => {
+                    addExternalAttendeeField();
+                    lucide.createIcons();
+                });
+                
+                // Reset form state on modal open
+                openScheduleMeetingModalBtn.addEventListener('click', () => {
+                    createMeetingForm.reset();
+                    state.selectedInternalAttendees = [];
+                    state.selectedExternalAttendees = [];
+                    externalAttendeesContainer.innerHTML = '';
+                    internalAttendeeChips.innerHTML = '';
+                    document.getElementById('location-physical').classList.remove('hidden');
+                    document.getElementById('location-gps').classList.add('hidden');
+                    document.getElementById('location-virtual').classList.add('hidden');
+                    meetingEndContainer.classList.remove('hidden');
+                });
+            }
+            
+            function addExternalAttendeeField(attendee = null) {
+                const id = `ext-att-${Date.now()}`;
+                const name = attendee ? attendee.name : '';
+                const org = attendee ? attendee.organization : '';
+                const role = attendee ? attendee.role : '';
+                
+                const fieldHTML = `
+                    <div id="${id}" class="grid grid-cols-3 gap-2 p-3 bg-gray-50 rounded-lg border">
+                        <input type="text" data-field="name" value="${name}" placeholder="Name" class="w-full p-2 border border-gray-300 rounded-lg col-span-3 sm:col-span-1" required>
+                        <input type="text" data-field="organization" value="${org}" placeholder="Organization" class="w-full p-2 border border-gray-300 rounded-lg col-span-3 sm:col-span-1">
+                        <input type="text" data-field="role" value="${role}" placeholder="Role" class="w-full p-2 border border-gray-300 rounded-lg col-span-3 sm:col-span-1">
+                        <button type="button" class="remove-external-attendee text-red-500 hover:text-red-700 col-span-3 sm:col-span-3 text-xs text-left" data-target="${id}">
+                            <span class="flex items-center gap-1"><span data-lucide="trash-2" class="w-3 h-3"></span> Remove</span>
+                        </button>
+                    </div>
+                `;
+                externalAttendeesContainer.insertAdjacentHTML('beforeend', fieldHTML);
+                
+                document.querySelector(`.remove-external-attendee[data-target="${id}"]`).addEventListener('click', (e) => {
+                    document.getElementById(e.currentTarget.dataset.target).remove();
+                });
+            }
+
+            async function handleCreateMeetingSubmit(e) {
+                e.preventDefault();
+                if (!validateForm(createMeetingForm)) return;
+                
+                // Date validation
+                const start = new Date(meetingStart.value);
+                const end = new Date(meetingEnd.value);
+                if (!meetingFullDay.checked && end <= start) {
+                    document.getElementById('meeting-date-error').classList.remove('hidden');
+                    return;
+                } else {
+                    document.getElementById('meeting-date-error').classList.add('hidden');
+                }
+                
+                // Attendee validation
+                if (state.selectedInternalAttendees.length === 0) {
+                    document.getElementById('internal-attendee-error').classList.remove('hidden');
+                    return;
+                } else {
+                    document.getElementById('internal-attendee-error').classList.add('hidden');
+                }
+                
+                // Get location
+                const locationType = document.querySelector('input[name="locationType"]:checked').value;
+                let locationValue = '';
+                if (locationType === 'physical') locationValue = locationPhysicalInput.value;
+                else if (locationType === 'gps') locationValue = locationGpsInput.value;
+                else if (locationType === 'virtual') locationValue = locationVirtualInput.value;
+
+                // Get external attendees
+                const externalAttendees = [];
+                externalAttendeesContainer.querySelectorAll(':scope > div').forEach(div => {
+                    const name = div.querySelector('[data-field="name"]').value;
+                    if (name) {
+                        externalAttendees.push({
+                            name: name,
+                            organization: div.querySelector('[data-field="organization"]').value,
+                            role: div.querySelector('[data-field="role"]').value
+                        });
+                    }
+                });
+
+                const newMeeting = {
+                    id: `m${Date.now()}`,
+                    title: meetingTitle.value,
+                    type: meetingType.value,
+                    location: { type: locationType, value: locationValue },
+                    start: meetingStart.value,
+                    end: meetingFullDay.checked ? meetingStart.value : meetingEnd.value,
+                    isFullDay: meetingFullDay.checked,
+                    internalAttendees: [...state.selectedInternalAttendees],
+                    externalAttendees: externalAttendees,
+                    status: 'Scheduled',
+                    meetingEvidence: []
+                };
+
+                db.meetings.push(newMeeting);
+                saveData();
+                renderMeetingList();
+                closeModal('create-meeting-modal');
+                showToast('Meeting scheduled successfully!', 'success');
+            }
+
+            // --- FORM: DISCUSSION POINT ---
+            
+            function initDiscussionPointForm() {
+                discussionPointForm.addEventListener('submit', handleDiscussionPointSubmit);
+                
+                // Action Required Toggle
+                dpActionRequiredToggle.addEventListener('click', () => {
+                    const isChecked = dpActionRequiredToggle.getAttribute('aria-checked') === 'true';
+                    dpActionRequiredToggle.setAttribute('aria-checked', !isChecked);
+                    dpActionRequiredToggle.classList.toggle('bg-blue-600', !isChecked);
+                    dpActionRequiredToggle.classList.toggle('bg-gray-200', isChecked);
+                    dpActionRequiredToggle.querySelector('span').classList.toggle('translate-x-5', !isChecked);
+                    dpActionRequiredToggle.querySelector('span').classList.toggle('translate-x-0', isChecked);
+                    
+                    dpActionDetails.classList.toggle('hidden', isChecked);
+                });
+                
+                // Rich Text Editor
+                document.querySelectorAll('.rte-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.execCommand(btn.dataset.command, false, null);
+                        dpSummary.focus();
+                    });
+                });
+                
+                // Raised By Selector
+                dpRaisedByType.addEventListener('change', () => {
+                    if (dpRaisedByType.value) {
+                        hideValidationError(dpRaisedByType);
+                    }
+                });
+            }
+            
+            function openDiscussionPointModal(dpId) {
+                discussionPointForm.reset();
+                dpSummary.innerHTML = '';
+                state.selectedRespInternal = [];
+                dpRespInternalChips.innerHTML = '';
+                
+                // Reset Action Toggle
+                dpActionRequiredToggle.setAttribute('aria-checked', 'false');
+                dpActionRequiredToggle.classList.remove('bg-blue-600');
+                dpActionRequiredToggle.classList.add('bg-gray-200');
+                dpActionRequiredToggle.querySelector('span').classList.remove('translate-x-5');
+                dpActionRequiredToggle.querySelector('span').classList.add('translate-x-0');
+                dpActionDetails.classList.add('hidden');
+                dpStatusContainer.classList.add('hidden');
+
+                // Populate "Raised By" and "Accountable" dropdowns based on current meeting attendees
+                const internalGroup = document.getElementById('dp-raised-by-internal-group');
+                const externalGroup = document.getElementById('dp-raised-by-external-group');
+                internalGroup.innerHTML = '';
+                externalGroup.innerHTML = '';
+                dpAccInternal.innerHTML = '<option value="">Select accountable person...</option>';
+                
+                const internalAttendees = state.currentMeetingObject.internalAttendees.map(getUserById).filter(Boolean);
+                internalAttendees.forEach(user => {
+                    internalGroup.innerHTML += `<option value="internal_${user.id}">${user.name}</option>`;
+                    dpAccInternal.innerHTML += `<option value="${user.id}">${user.name} (${user.role})</option>`;
+                });
+                
+                const externalAttendees = state.currentMeetingObject.externalAttendees;
+                externalAttendees.forEach(ext => {
+                    externalGroup.innerHTML += `<option value="external_${ext.name}">${ext.name} (External)</option>`;
+                });
+                
+                // Setup Responsible Person selector
+                setupAttendeeSelector(
+                    dpRespInternalSearch,
+                    dpRespInternalResults,
+                    dpRespInternalChips,
+                    () => internalAttendees, // Get only this meeting's internal attendees
+                    (user) => state.selectedRespInternal.push(user.id),
+                    (userId) => {
+                        state.selectedRespInternal = state.selectedRespInternal.filter(id => id !== userId);
+                    },
+                    () => state.selectedRespInternal,
+                    'dp-resp-internal-error'
+                );
+                
+                if (dpId) {
+                    // --- EDIT MODE ---
+                    discussionModalTitle.textContent = 'Edit Discussion Point';
+                    discussionFormSubmitBtn.textContent = 'Save Changes';
+                    discussionPointId.value = dpId;
+                    
+                    const dp = db.discussionPoints.find(p => p.id === dpId);
+                    if (!dp) {
+                        showToast('Error: Discussion point not found.', 'error');
+                        return;
+                    }
+                    
+                    // Populate basic fields
+                    if (dp.raisedBy.type === 'internal') {
+                        dpRaisedByType.value = `internal_${dp.raisedBy.value}`;
+                    } else if (dp.raisedBy.type === 'external') {
+                        dpRaisedByType.value = `external_${dp.raisedBy.value}`;
+                    } else {
+                        dpRaisedByType.value = 'multiple_participants';
+                    }
+                    dpSummary.innerHTML = dp.summary;
+
+                    // Populate action details
+                    if (dp.actionRequired) {
+                        dpActionRequiredToggle.click(); // This will toggle the UI
+                        
+                        const ad = dp.actionDetails;
+                        dpActionDesc.value = ad.description;
+                        dpAccInternal.value = ad.accountableInternal;
+                        dpRespExternal.value = ad.responsibleExternal || '';
+                        dpDueDate.value = ad.dueDate;
+                        dpPriority.value = ad.priority;
+                        
+                        // Populate responsible internal chips
+                        state.selectedRespInternal = [...ad.responsibleInternal];
+                        renderSelectedAttendeeChips(dpRespInternalChips, state.selectedRespInternal, (userId) => {
+                            state.selectedRespInternal = state.selectedRespInternal.filter(id => id !== userId);
+                            renderSelectedAttendeeChips(dpRespInternalChips, state.selectedRespInternal, () => {});
+                        });
+                        
+                        // Show and set status
+                        dpStatusContainer.classList.remove('hidden');
+                        dpStatus.value = ad.status;
+                    }
+
+                } else {
+                    // --- CREATE MODE ---
+                    discussionModalTitle.textContent = 'Add Discussion Point';
+                    discussionFormSubmitBtn.textContent = 'Add Point';
+                    discussionPointId.value = '';
+                    dpStatusContainer.classList.add('hidden');
+                }
+
+                openModal('add-discussion-point-modal');
+                lucide.createIcons();
+            }
+            
+            function handleDiscussionPointSubmit(e) {
+                e.preventDefault();
+                if (!validateForm(discussionPointForm)) return;
+                
+                // Manual validation for rich text and chips
+                let isValid = true;
+                if (dpSummary.textContent.trim().length < 10) {
+                    document.getElementById('dp-summary-error').classList.remove('hidden');
+                    isValid = false;
+                } else {
+                    document.getElementById('dp-summary-error').classList.add('hidden');
+                }
+                
+                const isActionRequired = dpActionRequiredToggle.getAttribute('aria-checked') === 'true';
+                if (isActionRequired && state.selectedRespInternal.length === 0) {
+                    document.getElementById('dp-resp-internal-error').classList.remove('hidden');
+                    isValid = false;
+                } else {
+                    document.getElementById('dp-resp-internal-error').classList.add('hidden');
+                }
+                
+                if (!isValid) return;
+
+                const raisedByValue = dpRaisedByType.value;
+                let raisedBy = {};
+                if (raisedByValue.startsWith('internal_')) {
+                    raisedBy = { type: 'internal', value: raisedByValue.replace('internal_', '') };
+                } else if (raisedByValue.startsWith('external_')) {
+                    raisedBy = { type: 'external', value: raisedByValue.replace('external_', '') };
+                } else {
+                    raisedBy = { type: 'multiple', value: 'Multiple Participants' };
+                }
+                
+                let actionDetails = null;
+                if (isActionRequired) {
+                    actionDetails = {
+                        description: dpActionDesc.value,
+                        responsibleInternal: [...state.selectedRespInternal],
+                        responsibleExternal: dpRespExternal.value || null,
+                        accountableInternal: dpAccInternal.value,
+                        accountableExternal: null, // Simplified
+                        dueDate: dpDueDate.value,
+                        priority: dpPriority.value,
+                        status: document.getElementById('discussion-point-id').value ? dpStatus.value : 'Not Started',
+                        evidence: []
+                    };
+                }
+                
+                const dpId = discussionPointId.value;
+                if (dpId) {
+                    // Update existing
+                    const dpIndex = db.discussionPoints.findIndex(p => p.id === dpId);
+                    if (dpIndex > -1) {
+                        const existingDp = db.discussionPoints[dpIndex];
+                        existingDp.raisedBy = raisedBy;
+                        existingDp.summary = dpSummary.innerHTML;
+                        existingDp.actionRequired = isActionRequired;
+                        if (isActionRequired) {
+                            // Preserve existing evidence
+                            actionDetails.evidence = existingDp.actionDetails?.evidence || [];
+                            existingDp.actionDetails = actionDetails;
+                        } else {
+                            existingDp.actionDetails = null;
+                        }
+                        showToast('Discussion point updated!', 'success');
+                    }
+                } else {
+                    // Create new
+                    const newDp = {
+                        id: `dp${Date.now()}`,
+                        meetingId: state.currentMeetingId,
+                        raisedBy: raisedBy,
+                        summary: dpSummary.innerHTML,
+                        actionRequired: isActionRequired,
+                        actionDetails: actionDetails,
+                        timestamp: new Date().toISOString()
+                    };
+                    db.discussionPoints.push(newDp);
+                    showToast('Discussion point added!', 'success');
+                }
+                
+                saveData();
+                renderMeetingView(state.currentMeetingId);
+                closeModal('add-discussion-point-modal');
+            }
+            
+            function deleteDiscussionPoint(dpId) {
+                db.discussionPoints = db.discussionPoints.filter(dp => dp.id !== dpId);
+                saveData();
+                renderMeetingView(state.currentMeetingId);
+                showToast('Discussion point deleted.', 'success');
+            }
+            
+            // --- FORM: EVIDENCE ---
+
+            function initEvidenceForm() {
+                uploadEvidenceForm.addEventListener('submit', handleEvidenceSubmit);
+                
+                // Simulated dropzone
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    evidenceDropzone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (eventName === 'dragenter' || eventName === 'dragover') {
+                            evidenceDropzone.classList.add('border-blue-500', 'bg-blue-50');
+                        } else {
+                            evidenceDropzone.classList.remove('border-blue-500', 'bg-blue-50');
+                        }
+                        if (eventName === 'drop') {
+                            const file = e.dataTransfer.files[0];
+                            if (file) {
+                                evidenceFileInput.files = e.dataTransfer.files;
+                                evidenceFileName.textContent = `File: ${file.name}`;
+                            }
+                        }
+                    }, false);
+                });
+                evidenceDropzone.addEventListener('click', () => evidenceFileInput.click());
+                evidenceFileInput.addEventListener('change', () => {
+                    if (evidenceFileInput.files.length > 0) {
+                        evidenceFileName.textContent = `File: ${evidenceFileInput.files[0].name}`;
+                    }
+                });
+            }
+
+            function openEvidenceModal(type, id) {
+                state.evidenceContext = { type, id };
+                uploadEvidenceForm.reset();
+                evidenceFileName.textContent = '';
+                
+                if (type === 'actionItem') {
+                    uploadEvidenceTitle.textContent = 'Add Action Evidence';
+                } else {
+                    uploadEvidenceTitle.textContent = 'Add Meeting Evidence';
+                }
+                openModal('upload-evidence-modal');
+            }
+            
+            function handleEvidenceSubmit(e) {
+                e.preventDefault();
+                
+                const file = evidenceFileInput.files[0];
+                const link = evidenceLink.value.trim();
+                const notes = evidenceNotes.value.trim();
+                
+                if (!file && !link) {
+                    document.getElementById('evidence-error').classList.remove('hidden');
+                    return;
+                }
+                document.getElementById('evidence-error').classList.add('hidden');
+                
+                const newEvidence = {
+                    id: `ev${Date.now()}`,
+                    name: file ? file.name : link.split('/').pop() || 'Link',
+                    url: file ? 'simulated_file_path' : link,
+                    type: file ? 'file' : 'link',
+                    notes: notes,
+                    timestamp: new Date().toISOString()
+                };
+                
+                const { type, id } = state.evidenceContext;
+                
+                if (type === 'actionItem') {
+                    const dp = db.discussionPoints.find(p => p.id === id);
+                    if (dp && dp.actionDetails) {
+                        dp.actionDetails.evidence.push(newEvidence);
+                    }
+                } else if (type === 'meeting') {
+                    const meeting = db.meetings.find(m => m.id === id);
+                    if (meeting) {
+                        meeting.meetingEvidence.push(newEvidence);
+                    }
+                }
+                
+                saveData();
+                renderMeetingView(state.currentMeetingId);
+                closeModal('upload-evidence-modal');
+                showToast('Evidence added successfully!', 'success');
+            }
+            
+            function deleteMeetingEvidence(meetingId, evidenceId) {
+                const meeting = db.meetings.find(m => m.id === meetingId);
+                if (meeting) {
+                    meeting.meetingEvidence = meeting.meetingEvidence.filter(ev => ev.id !== evidenceId);
+                    saveData();
+                    renderMeetingView(meetingId);
+                    showToast('Meeting evidence removed.', 'success');
+                }
+            }
+
+            // --- DYNAMIC WIDGETS ---
+
+            function setupAttendeeSelector(searchInput, resultsContainer, chipsContainer, getSourceFn, onAdd, onRemove, getSelectedFn, errorId = null) {
+                let focusedIndex = -1;
+
+                // Function to render results
+                const renderResults = () => {
+                    const query = searchInput.value.toLowerCase();
+                    if (query.length < 1) {
+                        resultsContainer.classList.add('hidden');
+                        return;
+                    }
+                    
+                    const source = getSourceFn();
+                    const selected = getSelectedFn();
+                    
+                    const filtered = source.filter(user =>
+                        !selected.includes(user.id) &&
+                        (user.name.toLowerCase().includes(query) ||
+                        user.organization.toLowerCase().includes(query) ||
+                        user.role.toLowerCase().includes(query))
+                    ).slice(0, 5); // Limit results
+
+                    if (filtered.length === 0) {
+                        resultsContainer.innerHTML = '<div class="p-3 text-sm text-gray-500">No users found.</div>';
+                    } else {
+                        resultsContainer.innerHTML = filtered.map((user, index) => `
+                            <div class="flex items-center gap-2 p-3 hover:bg-gray-100 cursor-pointer ${index === focusedIndex ? 'bg-gray-100' : ''}" data-user-id="${user.id}">
+                                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-semibold text-xs">
+                                    ${user.name.split(' ').map(n => n[0]).join('')}
+                                </span>
+                                <div>
+                                    <div class="font-medium text-sm">${user.name}</div>
+                                    <div class="text-xs text-gray-500">${user.organization} - ${user.role}</div>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                    resultsContainer.classList.remove('hidden');
+                };
+
+                // Function to add a user
+                const addUser = (userId) => {
+                    const user = getSourceFn().find(u => u.id === userId);
+                    if (user && !getSelectedFn().includes(user.id)) {
+                        onAdd(user);
+                        renderSelectedAttendeeChips(chipsContainer, getSelectedFn(), onRemove);
+                        searchInput.value = '';
+                        resultsContainer.classList.add('hidden');
+                        searchInput.focus();
+                        if (errorId) document.getElementById(errorId).classList.add('hidden');
+                    }
+                };
+
+                // Event Listeners
+                searchInput.addEventListener('input', () => {
+                    focusedIndex = -1;
+                    renderResults();
+                });
+                
+                searchInput.addEventListener('focus', renderResults);
+                
+                searchInput.addEventListener('keydown', (e) => {
+                    const items = resultsContainer.querySelectorAll('[data-user-id]');
+                    if (items.length === 0) return;
+
+                    switch (e.key) {
+                        case 'ArrowDown':
+                            e.preventDefault();
+                            focusedIndex = (focusedIndex + 1) % items.length;
+                            updateResultFocus(items);
+                            break;
+                        case 'ArrowUp':
+                            e.preventDefault();
+                            focusedIndex = (focusedIndex - 1 + items.length) % items.length;
+                            updateResultFocus(items);
+                            break;
+                        case 'Enter':
+                            e.preventDefault();
+                            if (focusedIndex > -1) {
+                                addUser(items[focusedIndex].dataset.userId);
+                            }
+                            break;
+                        case 'Escape':
+                            resultsContainer.classList.add('hidden');
+                            break;
+                    }
+                });
+
+                resultsContainer.addEventListener('click', (e) => {
+                    const target = e.target.closest('[data-user-id]');
+                    if (target) {
+                        addUser(target.dataset.userId);
+                    }
+                });
+
+                // Hide results on blur
+                document.addEventListener('click', (e) => {
+                    if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+                        resultsContainer.classList.add('hidden');
+                    }
+                });
+            }
+            
+            function updateResultFocus(items) {
+                items.forEach((item, index) => {
+                    item.classList.toggle('bg-gray-100', index === focusedIndex);
+                });
+            }
+            
+            function renderSelectedAttendeeChips(chipsContainer, selectedIds, onRemove) {
+                chipsContainer.innerHTML = selectedIds.map(id => {
+                    const user = getUserById(id);
+                    if (!user) return '';
+                    return `
+                        <span class="inline-flex items-center gap-2 bg-blue-100 text-blue-800 text-sm font-medium pl-3 pr-1 py-1 rounded-full">
+                            ${user.name} (${user.role})
+                            <button type="button" class="remove-attendee-chip p-0.5 bg-blue-200 rounded-full hover:bg-blue-300" data-user-id="${user.id}">
+                                <span data-lucide="x" class="w-3 h-3"></span>
+                            </button>
+                        </span>
+                    `;
+                }).join('');
+                
+                chipsContainer.querySelectorAll('.remove-attendee-chip').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        onRemove(btn.dataset.userId);
+                        renderSelectedAttendeeChips(chipsContainer, getSelectedFn(), onRemove); // Re-render
+                    });
+                });
+                
+                lucide.createIcons();
+            }
+
+            // --- HELPERS ---
+
+            function getUserById(userId) {
+                return db.users.find(u => u.id === userId);
+            }
+            
+            function getStatusBadge(status) {
+                return STATUS_COLORS[status] || 'bg-gray-100 text-gray-800';
+            }
+
+            function formatDate(dateString, includeTime = false) {
+                if (!dateString) return 'N/A';
+                const date = new Date(dateString);
+                const options = {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                };
+                if (includeTime) {
+                    options.hour = '2-digit';
+                    options.minute = '2-digit';
+                    options.hour12 = true;
+                }
+                return date.toLocaleString('en-US', options);
+            }
+            
+            function formatTime(dateString) {
+                if (!dateString) return 'N/A';
+                const date = new Date(dateString);
+                return date.toLocaleString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            }
+
+            function validateForm(form) {
+                let isValid = true;
+                clearValidationErrors(form);
+                
+                const inputs = form.querySelectorAll('[data-validate]');
+                
+                inputs.forEach(input => {
+                    const rules = input.dataset.validate.split('|');
+                    const value = input.value.trim();
+                    let isFieldValid = true;
+
+                    for (const rule of rules) {
+                        let [ruleName, ...params] = rule.split(':');
+                        
+                        if (ruleName === 'required') {
+                            if (!value) {
+                                isFieldValid = false;
+                                showError(input, `This field is required.`);
+                                break;
+                            }
+                        }
+                        
+                        if (ruleName === 'requiredIf') {
+                            const [field, expectedValue] = params[0].split(',');
+                            let controlElement;
+                            if (field === 'locationType') {
+                                controlElement = form.querySelector(`input[name="locationType"]:checked`);
+                            } else {
+                                controlElement = document.getElementById(field); // Assuming it's an ID
+                            }
+                            
+                            let controlValue;
+                            if (controlElement.type === 'checkbox') {
+                                controlValue = controlElement.checked.toString();
+                            } else if (controlElement.id === 'dp-action-required-toggle') {
+                                controlValue = controlElement.getAttribute('aria-checked');
+                            } else {
+                                controlValue = controlElement.value;
+                            }
+                            
+                            if (controlValue === expectedValue && !value) {
+                                isFieldValid = false;
+                                showError(input, `This field is required.`);
+                                break;
+                            }
+                        }
+                        
+                        if (ruleName === 'min') {
+                            const minLength = parseInt(params[0], 10);
+                            if (value && value.length < minLength) {
+                                isFieldValid = false;
+                                showError(input, `Must be at least ${minLength} characters.`);
+                                break;
+                            }
+                        }
+                    }
+                    if (!isFieldValid) isValid = false;
+                });
+                
+                return isValid;
+            }
+            
+            function showError(input, message) {
+                input.classList.add('border-red-500');
+                const errorSpan = document.querySelector(`[data-error-for="${input.id}"]`);
+                if (errorSpan) {
+                    errorSpan.textContent = message;
+                    errorSpan.classList.remove('hidden');
+                }
+            }
+            
+            function hideValidationError(input) {
+                input.classList.remove('border-red-500');
+                const errorSpan = document.querySelector(`[data-error-for="${input.id}"]`);
+                if (errorSpan) {
+                    errorSpan.classList.add('hidden');
+                }
+            }
+            
+            function clearValidationErrors(form) {
+                if (!form) return;
+                form.querySelectorAll('.border-red-500').forEach(el => el.classList.remove('border-red-500'));
+                form.querySelectorAll('[data-error-for]').forEach(el => el.classList.add('hidden'));
+                document.getElementById('meeting-date-error').classList.add('hidden');
+                document.getElementById('internal-attendee-error').classList.add('hidden');
+            }
+
+
+            // --- START THE APP ---
+            // init(); // Removed direct call
+            
+            // Wait for all resources (like lucide.js) to load
+            window.onload = function() {
+                init();
+            };
+        // }); // Wrapper Removed
+    </script>
+
+</body>
+</html>
 
